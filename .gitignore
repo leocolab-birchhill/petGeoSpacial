@@ -1,0 +1,31 @@
+# Secrets / local env
+.envs
+.env
+.env.*
+!.env.example
+databricks_deploy_config.json
+
+# Heavy pipeline inputs/outputs (map serves from map/app/public instead)
+data/raw/
+data/processed/
+data/output/
+data/runtime/
+mapbox_matrix_cache/
+mapbox_raw_responses/
+*.token
+
+# Databricks local bundle state
+.databricks/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Local IDE / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

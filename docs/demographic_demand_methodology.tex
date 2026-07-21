@@ -1,0 +1,209 @@
+\documentclass[10pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+\title{\vspace{-1.5em}Demographic Addressable Demand Model\\[0.25em]
+\large Canadian Pet Valu Whitespace Analysis --- H3 R8 Ranking}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-1.5em}
+
+\section{Objective}
+Estimate relative \emph{addressable household demand} for pet retail at the postal-code level, aggregate to Uber H3 resolution~8, and rank \textbf{all populated hexagons} (rural and non-rural). Raw household counts are preserved so weighted demand remains explainable. Household density is \emph{not} used to reduce demand; density belongs in separate store-economics / serviceability analysis.
+
+\section{Why Rural Demand Is Included}
+Pet Valu operates successfully in smaller rural markets. Excluding rural FSAs omitted roughly 2.6M households and understated national opportunity. Rural structure (detached housing, family share, income) is already reflected in the demographic factors, so rural postal codes use the \textbf{same base demand formula} as urban ones---no automatic rural penalty.
+
+\section{Universe}
+\begin{itemize}
+  \item Source: Environics postal demographics (\texttt{postal\_code\_demos\_geocoded.csv}), year 2026.
+  \item Join: \texttt{postal\_code\_h3\_crosswalk.parquet} (\texttt{h3\_r8}).
+  \item Include: all PCs with \texttt{households\_2026 > 0} and valid H3 assignment (rural + non-rural).
+  \item Rural ID: \texttt{is\_rural\_postal\_code} \textbf{or} FSA second character $=\mathtt{0}$.
+  \item Province: FSA / postal-region prefix $\to$ \{NL, NS, PE, NB, QC, ON, MB, SK, AB, BC, NT\_NU, YT\}.
+\end{itemize}
+
+\section{Source Variables}
+\begin{center}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+Role & Columns \\
+\midrule
+Size & \texttt{households\_2026}, \texttt{population\_2026} \\
+Rural & \texttt{is\_rural\_postal\_code}, FSA \\
+Income & \texttt{median\_household\_income\_2026}, \texttt{aggregate\_household\_income\_2026}, \texttt{income\_household\_base} \\
+Housing & \texttt{single\_detached\_households}, \texttt{semi\_detached\_households}, \texttt{apartment\_5plus\_storey\_households}, \texttt{housing\_structure\_base} \\
+Family & \texttt{family\_households}, \texttt{household\_type\_base} \\
+Age & \texttt{population\_age\_25\_44}, \texttt{population\_age\_45\_64} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Stabilized Income}
+For each postal code, in order:
+\begin{enumerate}
+  \item Use \texttt{median\_household\_income\_2026} if $\texttt{households\_2026}\ge 25$ and income $\in[\$20{,}000,\$500{,}000]$.
+  \item Else use FSA benchmark $\displaystyle\frac{\sum \texttt{aggregate\_household\_income\_2026}}{\sum \texttt{income\_household\_base}}$ when the FSA base $>0$.
+  \item Else use the national weighted average over the full analysis universe (rural included).
+\end{enumerate}
+
+\section{Base Demand Formula}
+Applied identically to rural and non-rural postal codes. Demand is a
+\emph{household-weighted propensity index}, not dollars or pet counts:
+\[
+D_{\text{base}}
+=
+H
+\times f_{\text{inc}}
+\times f_{\text{hou}}
+\times f_{\text{fam}}
+\times f_{\text{age}}
+\]
+where $H=\texttt{households\_2026}$ and each $f$ is a capped multiplier vs the national benchmark (bars $=$ national shares / reference income).
+
+\begin{center}
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{8.8cm}@{}}
+\toprule
+Factor & Definition \\
+\midrule
+$f_{\text{inc}}$ &
+$\mathrm{clip}\!\left(\sqrt{\dfrac{\text{stabilized\_income}}{100\,000}},\,0.80,\,1.30\right)$ \\[0.85em]
+ground-oriented share $g$ &
+$\dfrac{\texttt{single\_detached}+\texttt{semi\_detached}}{\texttt{housing\_structure\_base}}$ \\[0.85em]
+high-rise share $h$ &
+$\dfrac{\texttt{apartment\_5plus\_storey}}{\texttt{housing\_structure\_base}}$ \\[0.85em]
+$f_{\text{hou}}$ &
+$\mathrm{clip}\!\big(1+0.10(g-\bar g)-0.05(h-\bar h),\,0.90,\,1.10\big)$ \\[0.85em]
+family share $s_f$ &
+$\dfrac{\texttt{family\_households}}{\texttt{household\_type\_base}}$ \\[0.85em]
+$f_{\text{fam}}$ &
+$\mathrm{clip}\!\big(1+0.15(s_f-\bar s_f),\,0.925,\,1.075\big)$ \\[0.85em]
+age 25--64 share $s_a$ &
+$\dfrac{\texttt{pop\_25\_44}+\texttt{pop\_45\_64}}{\texttt{population\_2026}}$ \\[0.85em]
+$f_{\text{age}}$ &
+$\mathrm{clip}\!\big(1+0.10(s_a-\bar s_a),\,0.95,\,1.05\big)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+National benchmarks $(\bar g,\bar h,\bar s_f,\bar s_a)$ use \textbf{summed numerators / summed denominators} over the full analysis universe (rural included). Income reference is $\$100{,}000$.
+
+\section{Rural-Specific Adjustment}
+\textbf{Default: none} ($f_{\text{rural}}=1.0$).
+
+Rationale: detached housing, family composition, and income are already in $f_{\text{hou}},f_{\text{fam}},f_{\text{inc}}$. No independent rural pet-spend signal exists; adding a rural multiplier would double-count. Low density is \emph{not} a demand discount.
+
+Optional configurable multiplier (CLI \texttt{--rural-adjustment-factor}), applied only to rural postal codes, clipped to $[0.95,\,1.05]$:
+\[
+D_{\text{adj}}
+=
+\begin{cases}
+D_{\text{base}}\times f_{\text{rural}} & \text{if rural}\\
+D_{\text{base}} & \text{otherwise}
+\end{cases}
+\]
+Both $D_{\text{base}}$ and $D_{\text{adj}}$ are always written. Sensitivity compares adjustment OFF ($f=1$) vs ON (configured factor, or illustrative $1.02$ when production factor is $1$).
+
+\section{Caps / Bounds}
+\begin{center}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Factor & Lower & Upper \\
+\midrule
+Income & 0.80 & 1.30 \\
+Housing & 0.90 & 1.10 \\
+Family & 0.925 & 1.075 \\
+Age & 0.95 & 1.05 \\
+Optional rural adj. & 0.95 & 1.05 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{H3 Aggregation}
+\begin{itemize}
+  \item Sum base/adjusted demand and raw demographic counts for \textbf{all} postal codes to \texttt{h3\_r8}.
+  \item Recalculate hex shares from aggregated numerators/denominators.
+  \item \texttt{rural\_household\_share} $= \texttt{rural\_household\_count}/\texttt{households}$.
+  \item \texttt{is\_rural\_h3} iff share $\ge$ threshold (default $0.50$; configurable).
+  \item \texttt{coordinate\_precision\_flag}: \texttt{rural\_fsa\_centroid\_imprecise} if any rural PC contributes; else \texttt{urban\_local}.
+\end{itemize}
+
+\subsection*{Coordinate-location limitation}
+Rural FSALDU / FSA points often represent large geographic catchments. Assigning their households to a single H3 R8 cell can misplace demand spatially. The precision flag supports map caution and QA; it does \emph{not} reduce demand.
+
+\section{Ranking}
+Ranks are ordinal, descending (rank $1$ = highest demand). With $N$ hexes:
+\[
+\text{percentile}
+=
+\frac{N - \mathrm{rank} + 1}{N}
+\quad\Rightarrow\quad
+\text{top hex has percentile }1.
+\]
+\begin{itemize}
+  \item National rank/percentile on both $D_{\text{base}}$ and $D_{\text{adj}}$.
+  \item Rural-only and non-rural-only ranks within each \texttt{is\_rural\_h3} subset (base demand).
+  \item Province rank/percentile on base demand.
+  \item Compatibility alias: \texttt{national\_demand\_percentile} $=\texttt{national\_base\_demand\_percentile}$
+        (base, not adjusted). With default $f_{\text{rural}}=1$, base and adjusted ranks coincide.
+\end{itemize}
+
+\section{Map Filters}
+Master H3 output supports:
+\begin{center}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+View & Filter \\
+\midrule
+All areas / rural included & all rows (\texttt{filter\_all\_areas}, \texttt{filter\_rural\_included}) \\
+Rural excluded & \texttt{filter\_rural\_excluded} ($=$ not \texttt{is\_rural\_h3}) \\
+Rural only & \texttt{filter\_rural\_only} ($=$ \texttt{is\_rural\_h3}) \\
+\bottomrule
+\end{tabular}
+\end{center}
+Sensitivity views: compare base vs adjusted rankings (\texttt{demographic\_demand\_rural\_sensitivity.*}).
+
+\section{Interpretation}
+\begin{itemize}
+  \item \texttt{households}: raw size (never density-penalized).
+  \item \texttt{base\_addressable\_demand} ($D_{\text{base}}$): size $\times$ demographic factors.
+  \item \texttt{adjusted\_addressable\_demand} ($D_{\text{adj}}$): base $\times$ optional rural factor (default identical to base).
+  \item Factors $>1$: above-national propensity on that dimension (after caps).
+\end{itemize}
+
+\subsection*{Map / dashboard fields}
+\begin{itemize}
+  \item \textbf{Addressable demand} on the map = $\sum D_{\text{adj}}$ over postal codes in the hex (shown as \texttt{adjusted\_addressable\_demand}).
+  \item \textbf{Demand percentile} / opportunity-score demand term = \texttt{national\_demand\_percentile} (base-demand percentile alias above).
+  \item Income / Housing / Family / Age bars = hex-level recomputed $f_{\text{inc}},f_{\text{hou}},f_{\text{fam}},f_{\text{age}}$ (mid tick $=1$).
+\end{itemize}
+
+\section{Limitations}
+\begin{itemize}
+  \item No observed pet ownership or spend.
+  \item Caps compress extremes; small PCs lean on FSA/national income.
+  \item Rural coordinates may place households imprecisely in H3.
+  \item PCs with null coordinates remain outside the H3 universe.
+  \item Hex-level recomputed factors need not multiply exactly to summed demand indices.
+  \item Store proximity / drive time / competition are out of scope (routing pipeline separate).
+\end{itemize}
+
+\section{Output Fields}
+\texttt{h3\_r8\_demographic\_demand\_ranking}: \texttt{h3\_id}, \texttt{province}, \texttt{households}, \texttt{population}, \texttt{is\_rural\_h3}, \texttt{rural\_household\_count}, \texttt{rural\_household\_share}, \texttt{rural\_population}, \texttt{rural\_postal\_code\_count}, \texttt{coordinate\_precision\_flag}, \texttt{base\_addressable\_demand}, \texttt{adjusted\_addressable\_demand}, demand indices, component factors/shares, national base/adjusted ranks \& percentiles, rural-only \& non-rural-only ranks \& percentiles, province ranks, map filter booleans, quality flags, contributing PC count, raw count bases.
+
+Supporting: \texttt{postal\_demographic\_demand.parquet}, \texttt{demographic\_demand\_national\_benchmarks.json}, \texttt{demographic\_demand\_validation.md}, \texttt{demographic\_demand\_rural\_sensitivity.md/.csv}.
+
+\end{document}

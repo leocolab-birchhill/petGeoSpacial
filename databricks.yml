@@ -1,0 +1,61 @@
+# Databricks Asset Bundle for Pet Valu Mapbox Matrix routing
+# Workspace: https://dbc-be4688ff-39d6.cloud.databricks.com
+#
+# Deploy:
+#   databricks auth login --host https://dbc-be4688ff-39d6.cloud.databricks.com --profile petgeo
+#   databricks bundle deploy -t prod --profile petgeo
+#   databricks bundle run mapbox_matrix_routing -t prod --profile petgeo
+
+bundle:
+  name: petgeo-mapbox-routing
+
+include:
+  - resources/*.yml
+
+# Sync routing code into the workspace bundle path for job execution
+sync:
+  include:
+    - run_mapbox_matrix_routing.py
+    - scripts/*.py
+    - requirements.txt
+  exclude:
+    - .envs
+    - .env
+    - data/**
+    - mapbox_matrix_cache/**
+    - mapbox_raw_responses/**
+    - "*.parquet"
+    - "*.csv"
+    - "*.html"
+    - "*.xlsx"
+
+variables:
+  petgeo_data_root:
+    description: Unity Catalog Volume path for inputs, cache, and outputs
+    default: /dbfs/petgeo/petGeospacial
+  mapbox_secret_scope:
+    description: Databricks secret scope holding the Mapbox token
+    default: petgeo
+  mapbox_secret_key:
+    description: Secret key name for MAPBOX_ACCESS_TOKEN
+    default: mapbox_access_token
+  cluster_node_type:
+    description: Single-node instance type (AWS workspace)
+    default: i3.xlarge
+  existing_cluster_id:
+    description: All-purpose Personal Compute cluster id (job-cluster create is denied)
+    default: 0721-005223-u1oo2qrv
+
+targets:
+  prod:
+    mode: production
+    default: true
+    workspace:
+      host: https://dbc-be4688ff-39d6.cloud.databricks.com
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      petgeo_data_root: /dbfs/petgeo/petGeospacial
+      mapbox_secret_scope: petgeo
+      mapbox_secret_key: mapbox_access_token
+      cluster_node_type: i3.xlarge
+      existing_cluster_id: 0721-005223-u1oo2qrv

@@ -1,0 +1,9 @@
+# pipeline intermediates
+pipeline/build/
+
+# Generated app data is committed so GitHub Pages can serve the map.
+# Rebuild via pipeline when scores/tiles change, then commit the public/ updates.
+
+# node
+app/node_modules/
+app/dist/

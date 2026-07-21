@@ -1,0 +1,47 @@
+resources:
+  jobs:
+    mapbox_matrix_routing:
+      name: petgeo-mapbox-matrix-routing
+      max_concurrent_runs: 1
+      timeout_seconds: 86400  # 24 hours
+      tags:
+        project: petGeospacial
+        stage: mapbox-matrix
+      tasks:
+        - task_key: mapbox_matrix_route
+          description: One Mapbox Matrix request per H3 origin (1x3), cached on DBFS
+          # Personal Compute policy allows all-purpose clusters only (no job-cluster create).
+          existing_cluster_id: ${var.existing_cluster_id}
+          spark_python_task:
+            python_file: ../scripts/databricks_entrypoint.py
+            parameters:
+              - "--rps"
+              - "0.9"
+              - "--max-retries"
+              - "2"
+          libraries:
+            - pypi:
+                package: polars>=1.0
+            - pypi:
+                package: pyarrow>=14.0
+            - pypi:
+                package: requests>=2.31
+
+    mapbox_matrix_dry_run:
+      name: petgeo-mapbox-matrix-dry-run
+      max_concurrent_runs: 1
+      timeout_seconds: 3600
+      tasks:
+        - task_key: dry_run
+          existing_cluster_id: ${var.existing_cluster_id}
+          spark_python_task:
+            python_file: ../scripts/databricks_entrypoint.py
+            parameters:
+              - "--dry-run"
+          libraries:
+            - pypi:
+                package: polars>=1.0
+            - pypi:
+                package: pyarrow>=14.0
+            - pypi:
+                package: requests>=2.31
