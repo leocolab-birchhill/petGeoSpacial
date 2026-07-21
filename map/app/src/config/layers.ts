@@ -79,7 +79,8 @@ export const WHITESPACE_FILL_OPACITY = 0.42;
 /** First-load framing: Ottawa–Gatineau — dense hex mix (infill, weak, proven, true WS). */
 export const INITIAL_VIEW = {
   center: [-75.7, 45.4] as [number, number],
-  zoom: 8.35,
+  /** Just past storeUncluster so Pet Valu logo markers appear (not clusters). */
+  zoom: 9.15,
   minZoom: 3,
   maxZoom: 15,
 };
