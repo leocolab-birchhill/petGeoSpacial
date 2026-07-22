@@ -53,7 +53,13 @@ export default function HowToUseModal({ onClose }: { onClose: () => void }) {
           <p>
             Canada is tiled into H3 hexagons (~neighbourhood scale). Colour shows opportunity or another
             metric you pick in the top bar. Pet Valu stores are logo markers; competitors are small dots.
-            Drive times come from the Mapbox API.
+          </p>
+          <p>
+            <strong>Drive times</strong> come from the Mapbox Directions Matrix API (driving). For each
+            hex we take its centre, find the three nearest Pet Valu network stores by straight-line
+            distance, then ask Mapbox for road drive time to each.{" "}
+            <em>Nearest Pet Valu</em> is the shortest of those times; <em>Avg drive time (3 stores)</em>{" "}
+            is the mean across the stores that returned a route.
           </p>
         </section>
 
