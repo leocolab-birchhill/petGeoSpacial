@@ -50,7 +50,7 @@ export const METRICS: MetricDef[] = [
     kind: "sequential",
     ramp: ["#f2f7fb", "#d9e8f5", "#b7d4ec", "#8bbade", "#5d9bcb", "#3979b5", "#1f5898", "#103d73"],
     format: fmtMin,
-    description: "Cached Mapbox driving minutes to the closest network store.",
+    description: "Mapbox driving minutes to the closest network store.",
   },
   {
     id: "avg3_pv_minutes",
@@ -59,7 +59,7 @@ export const METRICS: MetricDef[] = [
     kind: "sequential",
     ramp: ["#f2f7fb", "#d9e8f5", "#b7d4ec", "#8bbade", "#5d9bcb", "#3979b5", "#1f5898", "#103d73"],
     format: fmtMin,
-    description: "Mean cached driving minutes across the three nearest network stores.",
+    description: "Mean Mapbox driving minutes across the three nearest network stores.",
   },
   {
     id: "competitor_intensity",

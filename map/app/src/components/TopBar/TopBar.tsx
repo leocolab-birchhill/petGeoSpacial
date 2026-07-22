@@ -136,7 +136,7 @@ export default function TopBar({
       )}
 
       {pct != null && (
-        <div className="coverage-chip" title="Cached Mapbox Matrix coverage — no new API calls">
+        <div className="coverage-chip" title="Mapbox drive-time coverage">
           Routing {pct}%
         </div>
       )}

@@ -101,7 +101,7 @@ function HexBody({ detail }: { detail: HexDetail }) {
             ))}
           </ul>
         )}
-        <p className="muted tiny">Straight-line path; labels use cached Mapbox driving metrics (no live API).</p>
+        <p className="muted tiny">Straight-line path; labels use Mapbox drive times.</p>
       </section>
 
       <section>

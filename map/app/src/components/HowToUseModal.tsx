@@ -53,7 +53,7 @@ export default function HowToUseModal({ onClose }: { onClose: () => void }) {
           <p>
             Canada is tiled into H3 hexagons (~neighbourhood scale). Colour shows opportunity or another
             metric you pick in the top bar. Pet Valu stores are logo markers; competitors are small dots.
-            Drive times come from a cached Matrix pull — no live Mapbox routing calls.
+            Drive times come from the Mapbox API.
           </p>
         </section>
 
